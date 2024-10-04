@@ -18,8 +18,13 @@ Huddle-Bot is your all-in-one AI-powered fantasy football assistant designed to 
     Download the needed extensions
 *9/29/2024*
     Updated design
-    **BUG** Problems loading data and creating features
+    *BUG* Problems loading data and creating features
+*10/03/24*
+    Fixed bugs
+    Model correctly works with test data
+    Future design update ideas
 
 ## FUTURE
-### Automated Data Fetching
+*Automated Data Fetching*
     - Potentially use other API or database to collect and automate data collection.
+    - Allow to user to view one player projection at a time.

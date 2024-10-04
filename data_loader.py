@@ -2,6 +2,11 @@ import pandas as pd
 import zipfile
 import os
 
+def load_csv_from_file(csv_path):
+    # Load the mock data from a single CSV
+    return pd.read_csv(csv_path)
+
+'''
 def load_csvs_from_zip(zip_path):
     # Create a directory to extract files
     extract_dir = 'extracted_files'
@@ -24,3 +29,4 @@ def load_csvs_from_zip(zip_path):
     
     combined_df = pd.concat(dfs, ignore_index=True)
     return combined_df
+'''
