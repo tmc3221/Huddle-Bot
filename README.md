@@ -10,6 +10,7 @@ Huddle-Bot is your all-in-one AI-powered fantasy football assistant designed to 
 - **recommendations.py**: Make recomendations.
 - **requirements.txt**: To list dependencies.
 - **main.py**: Runs model.
+- **collect.py**: Collects the necessary data.
 
 ## UPDATES
 *9/29/2024* 
@@ -23,6 +24,7 @@ Huddle-Bot is your all-in-one AI-powered fantasy football assistant designed to 
     Fixed bugs
     Model correctly works with test data
     Future design update ideas
+    Added collect.py
 
 ## FUTURE
 *Automated Data Fetching*
