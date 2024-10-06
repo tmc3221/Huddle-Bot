@@ -3,7 +3,97 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import json
 
-def scrape_defensive_data(opponent):
+# Fantasy Point Values
+PASSING_YARDS = 0.04
+RUSHING_YARDS = 0.1
+RECEIVING_YARDS = 0.1
+RECEPTIONS = 1
+RUSHING_TD = 6
+PASSING_TD = 4
+RECEIVING_TD = 6
+FUMBLE = -2
+INTERCEPTION = - 2
+
+def prepare_data(player_stats, defense_stats, position, points):
+   relevant_data = {}
+   #relevant_data['nextGameFantasyPoints'] = None
+   # Set defensive stats based on the player's position
+   if position == "QB":
+        # Consider all defensive stats for QBs
+        relevant_data['defense'] = defense_stats
+        relevant_data['player'] = {
+            'FantasyPointsAverage': player_stats.get('FantasyPointsAverage'),
+            'Completions': player_stats.get('Completions'),
+            'Attempts': player_stats.get('Attempts'),
+            'Yards': player_stats.get('Yards'),
+            'Average': player_stats.get('Average'),
+            'Touchdowns': player_stats.get('Touchdowns'),
+            'Interceptions': player_stats.get('Interceptions'),
+            'Sacks': player_stats.get('Sacks'),
+            'Sack Yards': player_stats.get('Sack Yards'),
+            'Rating': player_stats.get('Rating'),
+            'Rushing Attempts': player_stats.get('Rushing Attempts'),
+            'Rushing Yards': player_stats.get('Rushing Yards'),
+            'Rushing Average': player_stats.get('Rushing Average'),
+            'Rushing Touchdowns': player_stats.get('Rushing Touchdowns'),
+            'Fumbles': player_stats.get('Fumbles'),
+            'Fumbles Lost': player_stats.get('Fumbles Lost'),
+        }
+        relevant_data['fantasyPointAverage'] = points
+
+   elif position in ["RB", "FB"]:
+        # RB and FB should consider rushing, receiving, fumble, and scoring stats
+        relevant_data['defense'] = {
+            'rushing_stats': defense_stats.get('rushing'),
+            'receiving_stats': defense_stats.get('receiving'),
+            'fumble_stats': defense_stats.get('fumbles'),
+            'scoring_stats': defense_stats.get('scoring')
+        }
+        relevant_data['player'] = {
+            'FantasyPointsAverage': player_stats.get('FantasyPointsAverage'),
+            'Rushing Attempts': player_stats.get('Rushing Attempts'),
+            'Rushing Yards': player_stats.get('Rushing Yards'),
+            'Rushing Average': player_stats.get('Rushing Average'),
+            'Longest Run': player_stats.get('Longest Run'),
+            'Rushing Touchdowns': player_stats.get('Rushing Touchdowns'),
+            'Receptions': player_stats.get('Receptions'),
+            'Receiving Yards': player_stats.get('Receiving Yards'),
+            'Receiving Average': player_stats.get('Receiving Average'),
+            'Longest Reception': player_stats.get('Longest Reception'),
+            'Receiving Touchdowns': player_stats.get('Receiving Touchdowns'),
+            'Fumbles': player_stats.get('Fumbles'),
+            'Fumbles Lost': player_stats.get('Fumbles Lost'),
+        }
+
+   elif position in ["WR", "TE"]:
+        # WR and TE should consider rushing, receiving, fumble, and scoring stats
+        relevant_data['defense'] = {
+            'rushing_stats': defense_stats.get('rushing'),
+            'receiving_stats': defense_stats.get('receiving'),
+            'fumble_stats': defense_stats.get('fumble'),
+            'scoring_stats': defense_stats.get('scoring')
+        }
+        relevant_data['player'] = {
+            'FantasyPointsAverage': player_stats.get('FantasyPointsAverage'),
+            'Receptions': player_stats.get('Receptions'),
+            'Receiving Yards': player_stats.get('Receiving Yards'),
+            'Receiving Average': player_stats.get('Receiving Average'),
+            'Longest Reception': player_stats.get('Longest Reception'),
+            'Receiving Touchdowns': player_stats.get('Receiving Touchdowns'),
+            'Rushing Attempts': player_stats.get('Rushing Attempts'),
+            'Rushing Yards': player_stats.get('Rushing Yards'),
+            'Rushing Average': player_stats.get('Rushing Average'),
+            'Longest Run': player_stats.get('Longest Run'),
+            'Rushing Touchdowns': player_stats.get('Rushing Touchdowns'),
+            'Fumbles': player_stats.get('Fumbles'),
+            'Fumbles Lost': player_stats.get('Fumbles Lost'),
+        }
+
+   return relevant_data
+
+
+
+def scrape_defensive_data(opponent, defensive_data):
     # Define URLs for the defensive stats
     urls = {
         'passing': 'https://www.nfl.com/stats/team-stats/defense/passing/2024/reg/all',
@@ -14,7 +104,8 @@ def scrape_defensive_data(opponent):
         'interceptions': 'https://www.nfl.com/stats/team-stats/defense/interceptions/2024/reg/all'
     }
 
-    defensive_data = {}
+    # Create a dictionary to store the opponent's stats
+    opponent_stats = {'Team': opponent}
 
     for stat_type, url in urls.items():
         response = requests.get(url)
@@ -41,13 +132,13 @@ def scrape_defensive_data(opponent):
             
             normalized_team_name = team_name.lower().split(" ")[0]
             normalized_opponent = opponent.lower() + "\n"
+
+            #print(normalized_opponent == normalized_team_name)
             
             # Check if the team name matches the opponent
             if normalized_team_name == normalized_opponent:
                 # Extract the required statistics based on their position
-                stats = {
-                    'Team': team_name
-                }
+                stats = {}
                 
                 if stat_type == 'passing':
                     stats.update({
@@ -115,9 +206,10 @@ def scrape_defensive_data(opponent):
                         'Lng': cols[4].text.strip(),
                     })
 
-                defensive_data[stat_type] = pd.DataFrame([stats])  # Create a DataFrame with one row
+                #defensive_data[stat_type] = pd.DataFrame([stats])  # Create a DataFrame with one row
+                opponent_df = pd.DataFrame([stats])
+                defensive_data = pd.concat([defensive_data, opponent_df], ignore_index=True)
                 break  # Exit loop after finding the opponent
-
     return defensive_data
 
 def find_opponent(team_schedule, recent):
@@ -127,7 +219,7 @@ def find_opponent(team_schedule, recent):
     
     opponent = team_schedule[int(recent)]
 
-    return opponent
+    return opponent, int(recent)
 
 def scrape_nfl_player_data(player_name):
     # Format the player name to create the URL
@@ -241,25 +333,97 @@ def scrape_nfl_player_data(player_name):
         recent_games_data.append(game_data)
         #print(pd.DataFrame(recent_games_data))
 
-    return pd.DataFrame(recent_games_data), team_name, team_schedule, recent
+    return pd.DataFrame(recent_games_data), team_name, team_schedule, recent, player_position
 
-def main():
+def calculate_fantasy_average_output(position, player_data, weekNum):
+    yard_pts = 0
+    passing_td = 0
+    ints = 0
+    rushing = 0
+    rushing_td = 0
+    fumbles = 0
+    receiving_yard = 0
+    receiving_tds = 0
+    reception = 0
+
+    # Fill na
+    player_data = player_data.fillna(0)
+    player_data = player_data.replace('', 0).infer_objects(copy=False)
+    
+    # Find position
+    if position == "QB":
+        for i in range(weekNum):
+            yard_pts += int(player_data['Yards'].get(i)) * PASSING_YARDS
+            #print(yard_pts)
+            passing_td += int(player_data['Touchdowns'].get(i)) * PASSING_TD
+            #print(passing_td)
+            ints += int(player_data['Interceptions'].get(i)) * INTERCEPTION
+            #print(ints)
+            rushing += int(player_data['Rushing Yards'].get(i)) * RUSHING_YARDS
+            #print(rushing)
+            rushing_td += int(player_data['Rushing Touchdowns'].get(i)) * RUSHING_TD
+            #print(rushing_td)
+            fumbles += int(player_data['Fumbles Lost'].get(i)) * FUMBLE
+            #print(fumbles)
+        
+        return (yard_pts + passing_td + ints + rushing + rushing_td
+        + fumbles) / weekNum
+        #player_data['FantasyPointsAverage'] = average_pts
+    elif position in ["RB", "FB"]:
+        rushing = player_data.get('Rushing Yards') * RUSHING_YARDS
+        rushing_td = player_data.get('Rushing Touchdowns') * RUSHING_TD
+        fumbles = player_data.get('Fumbles Lost') * FUMBLE
+        reception = player_data.get('Receptions') * RECEPTIONS
+        receiving_yard = player_data.get('Receiving Yards') * RECEIVING_YARDS
+        receiving_tds = player_data.get('Receiving Touchdowns') * RECEIVING_TD
+
+        average_pts = (reception + receiving_yard + receiving_tds + rushing + rushing_td
+        + fumbles) / weekNum
+        player_data['FantasyPointsAverage'] = average_pts
+    elif position in ["WR", "TE"]:
+        rushing = player_data.get('Rushing Yards') * RUSHING_YARDS
+        rushing_td = player_data.get('Rushing Touchdowns') * RUSHING_TD
+        fumbles = player_data.get('Fumbles Lost') * FUMBLE
+        reception = player_data.get('Receptions') * RECEPTIONS
+        receiving_yard = player_data.get('Receiving Yards') * RECEIVING_YARDS
+        receiving_tds = player_data.get('Receiving Touchdowns') * RECEIVING_TD
+
+        average_pts = (reception + receiving_yard + receiving_tds + rushing + rushing_td
+        + fumbles) / weekNum
+        player_data['FantasyPointsAverage'] = average_pts
+
+
+def collect(player_name):
 
     # Read the schedule from the JSON file
     with open('data/teams.json', 'r') as file:
         nfl_schedule = json.load(file)
 
-    player_name = input("Enter the NFL player's name for prediction: ")
     try:
-        player_data, team_name, team_schedule, recent = scrape_nfl_player_data(player_name)
+        player_data, team_name, team_schedule, recent, position = scrape_nfl_player_data(player_name)
+        pd.set_option('display.max_rows', None)  # Display all rows
+        pd.set_option('display.max_columns', None)  # Display all columns
         #print(player_data)
-
+        #print(player_data)
+        opponent, weekNum = find_opponent(team_schedule, recent)
+        points = calculate_fantasy_average_output(position, player_data, weekNum)
         # Find the opponent
-        opponent = find_opponent(team_schedule, recent)
         #print(opponent)
-        
-        defensive_data = scrape_defensive_data(opponent)
 
+        defensive_data = pd.DataFrame()
+
+        for i in range(weekNum):
+            defensive_data = scrape_defensive_data(find_opponent(team_schedule, i)[0], defensive_data)
+
+        upcoming_defensive_data = pd.DataFrame()
+        upcoming_defensive_data = scrape_defensive_data(opponent, upcoming_defensive_data)
+
+        upcoming_defensive_data = upcoming_defensive_data.fillna(0)
+        upcoming_defensive_data = upcoming_defensive_data.replace('', 0).infer_objects(copy=False)
+        defensive_data = defensive_data.fillna(0)
+        defensive_data = defensive_data.replace('', 0).infer_objects(copy=False)
+        
+        
         '''print("Defensive Passing Data:")
         print(defensive_data['passing'])
         print("\nDefensive Rushing Data:")
@@ -280,17 +444,8 @@ def main():
         defensive_data['fumbles'].to_csv('project-docs/defensive_fumbles_data.csv', index=False)
         defensive_data['interceptions'].to_csv('project-docs/defensive_interceptions_data.csv', index=False)
 
-        # Assuming you have a function to prepare the data for the model
-        # prepared_data = prepare_data(player_data)
-        
-        # Example prediction
-        # prediction = make_predictions(trained_model, prepared_data)
-        
-        # Print the prediction
-        # print(f"Predicted Fantasy Points for {player_name}: {prediction}")
+        # Clean/Prepare the data
+        return prepare_data(player_data, defensive_data, position, points)
     
     except Exception as e:
         print(e)
-
-if __name__ == "__main__":
-    main()

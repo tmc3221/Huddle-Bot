@@ -29,6 +29,11 @@ Huddle-Bot is your all-in-one AI-powered fantasy football assistant designed to 
     Been working on implimenting the automated data fetching
     Data collector collect.py correctly grabs the data for the player as well as there opponent
     Next step: prepare and process relevant data
+*10/06/24*
+    Implimented defensive data for each opponent a player has played
+    Need to update prepare_data in order to use defensive_data and upcoming_defensive_data with the relevant stats for our model
+    Model will be updated to be trained with the past defensive data
+    Need to decide between mean and KNN
 
 ## FUTURE
 *Impliment Model Evaluation*
